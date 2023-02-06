@@ -135,6 +135,15 @@ type foremanHostJSON struct {
 	PuppetClasses        []ForemanObject              `json:"puppetclasses"`
 }
 
+// foremanHostDecode struct used for JSON decode.
+type foremanHostDecode struct {
+	ForemanHost
+	InterfacesAttributesDecode []ForemanInterfacesAttribute `json:"interfaces"`
+	PuppetClassesDecode        []ForemanObject              `json:"puppetclasses"`
+	ConfigGroupsDecode         []ForemanObject              `json:"config_groups"`
+	HostParametersDecode       []ForemanKVParameter         `json:"parameters"`
+}
+
 // Power struct for marshal/unmarshal of power state
 // valid states are on, off, soft, cycle, state
 // `omitempty`` lets use the same struct for power operations.Command
@@ -370,7 +379,7 @@ func (c *Client) CreateHost(h *ForemanHost, retryCount int) (*ForemanHost, error
 		return nil, reqErr
 	}
 
-	var createdHost ForemanHost
+	var createdHost  foremanHostDecode
 
 	retry := 0
 	var sendErr error
@@ -389,12 +398,15 @@ func (c *Client) CreateHost(h *ForemanHost, retryCount int) (*ForemanHost, error
 	if sendErr != nil {
 		return nil, sendErr
 	}
+	createdHost.InterfacesAttributes = createdHost.InterfacesAttributesDecode
+	createdHost.PuppetClassIds = foremanObjectArrayToIdIntArray(createdHost.PuppetClassesDecode)
+	createdHost.HostParameters = createdHost.HostParametersDecode
 
 	createdHost.ComputeAttributes, _ = c.readComputeAttributes(createdHost.Id)
 
 	log.Debugf("createdHost: [%+v]", createdHost)
 
-	return &createdHost, nil
+	return &createdHost.ForemanHost, nil
 }
 
 // ReadHost reads the attributes of a ForemanHost identified by the supplied ID

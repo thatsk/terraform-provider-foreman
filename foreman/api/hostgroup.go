@@ -80,6 +80,16 @@ type ForemanHostgroup struct {
 // ForemanHostgroup struct used for JSON decode.  Foreman API returns the ids
 // back as a list of ForemanObjects with some of the attributes of the data
 // types. However, we are only interested in the IDs returned.
+type foremanHostGroupDecode struct {
+	ForemanHostgroup
+	PuppetClassesDecode       []ForemanObject      `json:"puppetclasses"`
+	ConfigGroupsDecode        []ForemanObject      `json:"config_groups"`
+	HostGroupParametersDecode []ForemanKVParameter `json:"parameters,omitempty"`
+}
+
+// ForemanHostgroup struct used for JSON decode.  Foreman API returns the ids
+// back as a list of ForemanObjects with some of the attributes of the data
+// types. However, we are only interested in the IDs returned.
 type foremanHgRespJSON struct {
 	PuppetClasses []ForemanObject `json:"puppetclasses"`
 }
@@ -281,15 +291,18 @@ func (c *Client) UpdateHostgroup(h *ForemanHostgroup) (*ForemanHostgroup, error)
 		return nil, reqErr
 	}
 
-	var updatedHostgroup ForemanHostgroup
+	var updatedHostgroup foremanHostGroupDecode
 	sendErr := c.SendAndParse(req, &updatedHostgroup)
 	if sendErr != nil {
 		return nil, sendErr
 	}
 
+	updatedHostgroup.PuppetClassIds = foremanObjectArrayToIdIntArray(updatedHostgroup.PuppetClassesDecode)
+	updatedHostgroup.HostGroupParameters = updatedHostgroup.HostGroupParametersDecode
+
 	log.Debugf("updatedHostgroup: [%+v]", updatedHostgroup)
 
-	return &updatedHostgroup, nil
+	return &updatedHostgroup.ForemanHostgroup, nil
 }
 
 // DeleteHostgroup deletes the ForemanHostgroup identified by the supplied ID
